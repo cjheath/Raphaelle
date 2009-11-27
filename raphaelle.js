@@ -56,6 +56,20 @@ Raphael.el.draggable = function(to_drag, right_button) {
 	// console.log("X="+event.clientX+", Y="+event.clientY);
 	if (!started) return;
 
+	/*
+	// Start hit test
+	var rect = paper.canvas.createSVGRect();
+	rect.x = event.clientX-2;
+	rect.y = event.clientY-2;
+	rect.width = 5;
+	rect.height = 5;
+	// console.log(rect);
+	// Find all objects that intersect this rect which are below the drag_obj
+	var hits = paper.canvas.getIntersectionList(rect, null); //, drag_obj.node);
+	for (hit in hits) console.log(hit);
+	// end hit test
+	*/
+
 	drag_obj.updateDrag(event.clientX-last_x, event.clientY-last_y, event.ctrlKey, event.shiftKey, event.altKey);
 	last_x = event.clientX;
 	last_y = event.clientY;

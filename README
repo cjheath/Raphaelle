@@ -4,7 +4,7 @@ Just call some_raphael_object.draggable() and you're done.
 If you want a click on one object to start a drag on another target
 object, pass the target object to draggable().
 
-draggable() takes a second optional argument to limit which mouse
+draggable() takes a second optional argument to restrict which mouse
 button will be used for dragging. Pass false and only the left button
 will drag, or true and only the right button will.
 
@@ -21,10 +21,10 @@ while dragging. Otherwise the object will be translate()d on each move.
 Example (resize the rectangle instead of dragging it):
 
       rect.updateDrag = function(dx, dy, ctrl, shift, alt) {
-	rect.attr({
-	  width: rect.attrs.width + dx,
-	  height: rect.attrs.height + dy
-	})
+        rect.attr({
+          width: rect.attrs.width + dx,
+          height: rect.attrs.height + dy
+        })
       }
 
 If the object supports startDrag and finishDrag methods, those will be
