@@ -1,5 +1,6 @@
-// A click on this Raphael element causes "to_drag" to start dragging
-Raphael.el.draggable = function(to_drag) {
+// A click on this Raphael element causes "to_drag" to start dragging.
+// right_button = null means drag using either, otherwise its false or true for left or right.
+Raphael.el.draggable = function(to_drag, right_button) {
   var drag_obj = to_drag != null ? to_drag : this;
 
   // Check that this is an ok thing to even think about:
@@ -18,6 +19,8 @@ Raphael.el.draggable = function(to_drag) {
       // if (target.nodeType == 3) target = target.parentNode;	// Safari
       // console.log("Over "+target);
 
+      if (right_button != null && (right_button == true) != (event.button > 1)) return;
+
       var node = this;
       var started = false;
       var start_x, start_y;
@@ -31,12 +34,13 @@ Raphael.el.draggable = function(to_drag) {
 	  event.preventDefault();
 	}
 
+	// Figure out if the drag should start
 	var delta_x = last_x-event.clientX;
 	var delta_y = last_y-event.clientY;
 	if (!started && (delta_x>3 || delta_x<-3 || delta_y>3 || delta_y<-3)) {
 	  started = true;
 	}
-	console.log("X="+event.clientX+", Y="+event.clientY);
+	// console.log("X="+event.clientX+", Y="+event.clientY);
 	if (!started) return;
 
 	drag_obj.translate(event.clientX-last_x, event.clientY-last_y);
