@@ -1,6 +1,7 @@
-A simple extension to Raphael elements to make them draggable.  Just call some_raphael_object.draggable() and you're done.
-
-This is pretty alpha right now, but it works.
+A simple extension to Raphael elements to make them draggable.
+Just call some_raphael_object.draggable() and you're done.
+If you want a click on one object to start a drag on another
+terget object, passthe target object to draggable().
 
 
 MIT License
