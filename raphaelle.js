@@ -1,7 +1,7 @@
 // A click on this Raphael element causes "to_drag" to start dragging.
 // right_button = null means drag using either, otherwise its false or true for left or right.
-// If the object being dragged has an updateDrag(dragging_over, x, y, ctrl, shift, alt), the default one isn't added
-// If the object has startDrag(x, y) , and finishDrag(dropped_on, x, y), those are called.
+// If the object being dragged has an updateDrag(dragging_over, x, y, event), the default one isn't added
+// If the object has startDrag(x, y, event) , and finishDrag(dropped_on, x, y), those are called.
 Raphael.el.draggable = function(to_drag, right_button) {
   var drag_obj;
   // drag_obj = to_drag != null ? to_drag : this;
@@ -24,12 +24,13 @@ Raphael.el.draggable = function(to_drag, right_button) {
       if (target.nodeType == 3) target = target.parentNode;	// Safari
       // console.log("MouseDown on "+drag_obj.node.id+" with target="+target.id);
 
-      if (right_button !== null && (right_button === true) !== (event.button > 1)) { return; }
+      if (typeof right_button != 'undefined' && (right_button == false) === (event.button > 1)) { return; }
 
       var node = this;
       var started = false;
       var start_x, start_y;
       var last_x, last_y;
+      var start_event = event;
       start_x = last_x = event.clientX;
       start_y = last_y = event.clientY;
 
@@ -37,6 +38,7 @@ Raphael.el.draggable = function(to_drag, right_button) {
 	drag_obj.hide();
 	var dragging_over = document.elementFromPoint(event.clientX, event.clientY);
 	drag_obj.show();
+	if (dragging_over.nodeType == 3) dragging_over = dragging_over.parentNode;	// Safari/Opera
 	return dragging_over;
       }
 
@@ -54,14 +56,14 @@ Raphael.el.draggable = function(to_drag, right_button) {
 
 	  // REVISIT: Bring the object to the front so it doesn't drag behind things, and restore it later
 	  if (typeof drag_obj.startDrag != 'undefined') {
-	    drag_obj.startDrag(last_x, last_y);
+	    drag_obj.startDrag(last_x, last_y, start_event);
 	  }
 	}
 	if (!started) { return; }
 
 	var dragging_over = over(event);
 	// console.log("Move "+drag_obj.node.id+" over "+dragging_over.id+" to X="+event.clientX+", Y="+event.clientY);
-	drag_obj.updateDrag(dragging_over, event.clientX-last_x, event.clientY-last_y, event.ctrlKey, event.shiftKey, event.altKey);
+	drag_obj.updateDrag(dragging_over, event.clientX-last_x, event.clientY-last_y, event);
 	last_x = event.clientX;
 	last_y = event.clientY;
       };
@@ -88,7 +90,7 @@ Raphael.el.draggable = function(to_drag, right_button) {
       revert = function(event) {
 	if (!started) { return; }
 	// console.log("start_x="+start_x+", start_y="+start_y+"; last_x="+last_x+", last_y="+last_y);
-	drag_obj.updateDrag(null, start_x-last_x, start_y-last_y, event.ctrlKey, event.shiftKey, event.altKey);
+	drag_obj.updateDrag(null, start_x-last_x, start_y-last_y, event);
 	started = false;  // Sometimes get the same event twice.
       };
 
