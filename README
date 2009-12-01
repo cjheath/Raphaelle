@@ -1,12 +1,31 @@
-A simple extension to Raphael elements to make them draggable.
+An extension to Raphael elements to make them draggable.
 Just call some_raphael_object.draggable() and you're done.
+Or pass options and/or add methods to customise the behaviour.
 
-If you want a click on one object to start a drag on another target
-object, pass the target object to draggable().
+Options:
+  drag_obj
+     Start the drag on this object instead of "this".
+  right_button
+     leave undefined to drag using either button, otherwise set to
+     false or true for left or right button only.
+  reluctance
+     Number of pixels of motion before a drag starts (default 3).
 
-draggable() takes a second optional argument to restrict which mouse
-button will be used for dragging. Pass false and only the left button
-will drag, or true and only the right button will.
+Optional methods on drag_obj:
+
+ dragUpdate(dragging_over, x, y, event)
+     replaces the default one (which uses Raphael's translate())
+
+ dragStart(x, y, event)
+     called (after reluctance) with the mousedown event and location.
+
+ dragFinish(dropped_on, x, y, event)
+     called with the mouseup event and location (if not cancelled).
+
+ dragCancel()
+     called if the drag is cancelled (after dragUpdate has reverted the motion)
+
+The escape key can be used to cancel a drag and revert the motion.
 
 Simple example:
 
@@ -14,21 +33,21 @@ Simple example:
       rect = paper.rect(5, 10, 60, 20, 10).attr({stroke: "#009", "stroke-width": 3});
       rect.draggable();
 
-If the object supports an updateDrag method, that will be called with the
-x and y deltas and the booleans ctrl, shift, alt for each mouse move
-while dragging. Otherwise the object will be translate()d on each move.
+If the object supports an dragUpdate method, that will be called with the
+x and y deltas and the event for each mouse move while dragging.
 
 Example (resize the rectangle instead of dragging it):
 
-      rect.updateDrag = function(dx, dy, ctrl, shift, alt) {
+      paper = Raphael($("notepad"), 200, 200);
+      rect = paper.rect(5, 10, 60, 20, 10).attr({stroke: "#009", "stroke-width": 3});
+      rect.draggable({reluctance: 10});
+
+      rect.updateDrag = function(dx, dy, event) {
         rect.attr({
           width: rect.attrs.width + dx,
           height: rect.attrs.height + dy
         })
       }
-
-If the object supports startDrag and finishDrag methods, those will be
-called with the clientX and clientY from the mouse event.
 
 MIT License
 
