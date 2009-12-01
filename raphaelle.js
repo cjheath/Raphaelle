@@ -1,13 +1,31 @@
-// A click on this Raphael element causes "to_drag" to start dragging.
-// right_button = null means drag using either, otherwise its false or true for left or right.
-// If the object being dragged has an updateDrag(dragging_over, x, y, event), the default one isn't added
-// If the object has startDrag(x, y, event) , and finishDrag(dropped_on, x, y), those are called.
-Raphael.el.draggable = function(to_drag, right_button) {
-  var drag_obj;
-  // drag_obj = to_drag != null ? to_drag : this;
-  if (to_drag != null) { drag_obj = to_drag; } else { drag_obj = this; }
+/*
+ * A click and motion on this Raphael element causes a drag to start.
+ * Options:
+ *   drag_obj
+ *	Start the drag on this object instead of "this".
+ *   right_button
+ *	unset means drag using either button, otherwise its false or true for left or right.
+ *   reluctance
+ *	Number of pixels of motion before a drag starts (default 3).
+ *
+ * Optional methods on drag_obj:
+ *  dragUpdate(dragging_over, x, y, event)
+ *	replaces the default one (which uses Raphael's translate())
+ *  dragStart(x, y, event)
+ *	called (after reluctance) with the mousedown event and location.
+ *  dragFinish(dropped_on, x, y, event)
+ *	called with the mouseup event and location (if not cancelled).
+ *  dragCancel()
+ *	called if the drag is cancelled
+ *
+ * The escape key can be used to cancel a drag and revert the motion.
+ */
+Raphael.el.draggable = function(options) {
+  if (typeof options == 'undefined') { options = {}; }
+  var drag_obj = options.drag_obj;
+  if (typeof drag_obj == 'undefined') { drag_obj = this; }
 
-  // Check that this is an ok thing to even think about:
+  // Check that this is an ok thing to even think about doing
   if (typeof this.node == 'undefined' && typeof this.paper == 'undefined') {
     console.log(this+' is not a Raphael object so you can\'t make it draggable');
     return;
@@ -17,6 +35,10 @@ Raphael.el.draggable = function(to_drag, right_button) {
     return;
   }
 
+  // options.reluctance is the number of pixels of motion before a drag will start:
+  var reluctance = options.reluctance;
+  if (typeof reluctance == 'undefined') { reluctance = 3; }
+
   $(this.node).mousedown(
     function (event) {
       var dragging = true;
@@ -24,6 +46,8 @@ Raphael.el.draggable = function(to_drag, right_button) {
       if (target.nodeType == 3) target = target.parentNode;	// Safari
       // console.log("MouseDown on "+drag_obj.node.id+" with target="+target.id);
 
+      // Set right_button to true for right-click dragging only, to false for left-click only. Otherwise you get both.
+      var right_button = options.right_button;
       if (typeof right_button != 'undefined' && (right_button == false) === (event.button > 1)) { return; }
 
       var node = this;
@@ -34,6 +58,7 @@ Raphael.el.draggable = function(to_drag, right_button) {
       start_x = last_x = event.clientX;
       start_y = last_y = event.clientY;
 
+      // Figure out what object (other than drag_obj) is under the pointer
       var over = function(event) {
 	drag_obj.hide();
 	var dragging_over = document.elementFromPoint(event.clientX, event.clientY);
@@ -51,19 +76,19 @@ Raphael.el.draggable = function(to_drag, right_button) {
 	// Figure out if the drag should start
 	var delta_x = last_x-event.clientX;
 	var delta_y = last_y-event.clientY;
-	if (!started && (delta_x>3 || delta_x<-3 || delta_y>3 || delta_y<-3)) {
+	if (!started && (delta_x>reluctance || delta_x<-reluctance || delta_y>reluctance || delta_y<-reluctance)) {
 	  started = true;
 
 	  // REVISIT: Bring the object to the front so it doesn't drag behind things, and restore it later
-	  if (typeof drag_obj.startDrag != 'undefined') {
-	    drag_obj.startDrag(last_x, last_y, start_event);
+	  if (typeof drag_obj.dragStart != 'undefined') {
+	    drag_obj.dragStart(last_x, last_y, start_event);
 	  }
 	}
 	if (!started) { return; }
 
 	var dragging_over = over(event);
 	// console.log("Move "+drag_obj.node.id+" over "+dragging_over.id+" to X="+event.clientX+", Y="+event.clientY);
-	drag_obj.updateDrag(dragging_over, event.clientX-last_x, event.clientY-last_y, event);
+	drag_obj.dragUpdate(dragging_over, event.clientX-last_x, event.clientY-last_y, event);
 	last_x = event.clientX;
 	last_y = event.clientY;
       };
@@ -81,6 +106,9 @@ Raphael.el.draggable = function(to_drag, right_button) {
 	var character = String.fromCharCode(code);
 	// console.log("key="+code+" char="+character);
 	if (code == 27) { // Escape
+	  if (typeof drag_obj.dragCancel != 'undefined') {
+	    drag_obj.dragCancel();
+	  }
 	  revert(event);
 	  cancel();
 	}
@@ -90,7 +118,7 @@ Raphael.el.draggable = function(to_drag, right_button) {
       revert = function(event) {
 	if (!started) { return; }
 	// console.log("start_x="+start_x+", start_y="+start_y+"; last_x="+last_x+", last_y="+last_y);
-	drag_obj.updateDrag(null, start_x-last_x, start_y-last_y, event);
+	drag_obj.dragUpdate(null, start_x-last_x, start_y-last_y, event);
 	started = false;  // Sometimes get the same event twice.
       };
 
@@ -98,9 +126,11 @@ Raphael.el.draggable = function(to_drag, right_button) {
       var mouseup = function(event) {
 	if (started) {
 	  var dropped_on = over(event);
-	  if (typeof drag_obj.finishDrag != 'undefined') {
-	    drag_obj.finishDrag(dropped_on, last_x, last_y);
+	  if (typeof drag_obj.dragFinish != 'undefined') {
+	    drag_obj.dragFinish(dropped_on, last_x, last_y, event);
 	  }
+	  event.stopPropagation();
+	  event.preventDefault();
 	}
 	cancel();
       };
