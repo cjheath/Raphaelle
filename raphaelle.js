@@ -1,4 +1,8 @@
 /*
+ * Drag and drop for Raphael elements.
+ *
+ * You need to include jquery and jquery.dimension.js
+ *
  * A click and motion on this Raphael element causes a drag to start.
  * Options:
  *   drag_obj
@@ -8,7 +12,7 @@
  *   reluctance
  *	Number of pixels of motion before a drag starts (default 3).
  *
- * Optional methods on drag_obj:
+ * Optional methods on drag_obj. The event is passed so you can see the modifier keys.
  *  dragUpdate(dragging_over, x, y, event)
  *	replaces the default one (which uses Raphael's translate())
  *  dragStart(x, y, event)
@@ -33,6 +37,20 @@ Raphael.el.draggable = function(options) {
   if (typeof drag_obj.node == 'undefined' && typeof drag_obj.paper == 'undefined') {
     console.log(drag_obj+' is not a Raphael object so you can\'t make it draggable');
     return;
+  }
+
+  if (typeof drag_obj.paper.fromPage == 'undefined') {
+    // jquery.dimension and event.pagxX/Y excludes the body margin:
+    var body_offset = $(document).contents().children('body').offset();
+    drag_obj.paper.fromPage = 
+      function(x,y) {
+	if (x.pageX>=0) { // An Event was passed, not x,y
+	  y = x.pageY; x = x.pageX;
+	}
+	var pp = $(paper.canvas.parentNode).position();
+	// console.log('from page x='+x+', y='+y+' pos left='+pp.left+", top="+pp.top);
+	return {x:x-body_offset.left-pp.left, y:y-body_offset.top-pp.top}
+      }
   }
 
   // options.reluctance is the number of pixels of motion before a drag will start:
@@ -81,7 +99,8 @@ Raphael.el.draggable = function(options) {
 
 	  // REVISIT: Bring the object to the front so it doesn't drag behind things, and restore it later
 	  if (typeof drag_obj.dragStart != 'undefined') {
-	    drag_obj.dragStart(last_x, last_y, start_event);
+	    var canvas_pos = paper.fromPage(event.pageX+delta_x, event.pageY+delta_y);
+	    drag_obj.dragStart(canvas_pos.x, canvas_pos.y, start_event);
 	  }
 	}
 	if (!started) { return; }
@@ -127,7 +146,8 @@ Raphael.el.draggable = function(options) {
 	if (started) {
 	  var dropped_on = over(event);
 	  if (typeof drag_obj.dragFinish != 'undefined') {
-	    drag_obj.dragFinish(dropped_on, last_x, last_y, event);
+	    var canvas_pos = paper.fromPage(event);
+	    drag_obj.dragFinish(dropped_on, canvas_pos.x, canvas_pos.y, event);
 	  }
 	  event.stopPropagation();
 	  event.preventDefault();
