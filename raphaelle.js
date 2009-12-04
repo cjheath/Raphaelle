@@ -47,10 +47,10 @@ Raphael.el.draggable = function(options) {
 	if (x.pageX>=0) { // An Event was passed, not x,y
 	  y = x.pageY; x = x.pageX;
 	}
-	var pp = $(paper.canvas.parentNode).position();
+	var pp = $(drag_obj.paper.canvas.parentNode).position();
 	// console.log('from page x='+x+', y='+y+' pos left='+pp.left+", top="+pp.top);
-	return {x:x-body_offset.left-pp.left, y:y-body_offset.top-pp.top}
-      }
+	return {x:x-body_offset.left-pp.left, y:y-body_offset.top-pp.top};
+      };
   }
 
   // options.reluctance is the number of pixels of motion before a drag will start:
@@ -61,12 +61,12 @@ Raphael.el.draggable = function(options) {
     function (event) {
       var dragging = true;
       var target = typeof event.target != 'undefined' ? event.target : event.srcElement;  // Firefox/IE
-      if (target.nodeType == 3) target = target.parentNode;	// Safari
+      if (target.nodeType == 3) { target = target.parentNode; }	// Safari
       // console.log("MouseDown on "+drag_obj.node.id+" with target="+target.id);
 
       // Set right_button to true for right-click dragging only, to false for left-click only. Otherwise you get both.
       var right_button = options.right_button;
-      if (typeof right_button != 'undefined' && (right_button == false) === (event.button > 1)) { return; }
+      if (typeof right_button != 'undefined' && (right_button === false) === (event.button > 1)) { return; }
 
       var node = this;
       var started = false;
@@ -81,9 +81,9 @@ Raphael.el.draggable = function(options) {
 	drag_obj.hide();
 	var dragging_over = document.elementFromPoint(event.clientX, event.clientY);
 	drag_obj.show();
-	if (dragging_over.nodeType == 3) dragging_over = dragging_over.parentNode;	// Safari/Opera
+	if (dragging_over.nodeType == 3) { dragging_over = dragging_over.parentNode; }	// Safari/Opera
 	return dragging_over;
-      }
+      };
 
       var mousemove = function(event) {
 	// Hack to prevent Firefox from sometimes dragging the canvas element
@@ -99,7 +99,7 @@ Raphael.el.draggable = function(options) {
 
 	  // REVISIT: Bring the object to the front so it doesn't drag behind things, and restore it later
 	  if (typeof drag_obj.dragStart != 'undefined') {
-	    var canvas_pos = paper.fromPage(event.pageX+delta_x, event.pageY+delta_y);
+	    var canvas_pos = drag_obj.paper.fromPage(event.pageX+delta_x, event.pageY+delta_y);
 	    drag_obj.dragStart(canvas_pos.x, canvas_pos.y, start_event);
 	  }
 	}
@@ -122,7 +122,7 @@ Raphael.el.draggable = function(options) {
 	if (!event) { event = window.event; }
 	if (event.keyCode) { code = event.keyCode; }
 	else if (event.which) { code = event.which; }
-	var character = String.fromCharCode(code);
+	// var character = String.fromCharCode(code);
 	// console.log("key="+code+" char="+character);
 	if (code == 27) { // Escape
 	  revert(event);
@@ -146,7 +146,7 @@ Raphael.el.draggable = function(options) {
 	if (started) {
 	  var dropped_on = over(event);
 	  if (typeof drag_obj.dragFinish != 'undefined') {
-	    var canvas_pos = paper.fromPage(event);
+	    var canvas_pos = drag_obj.paper.fromPage(event);
 	    drag_obj.dragFinish(dropped_on, canvas_pos.x, canvas_pos.y, event);
 	  }
 	  event.stopPropagation();
