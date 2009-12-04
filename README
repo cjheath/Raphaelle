@@ -13,7 +13,7 @@ Options:
 
 Optional methods on drag_obj:
 
- dragUpdate(dragging_over, x, y, event)
+ dragUpdate(dragging_over, delta_x, delta_y, event)
      replaces the default one (which uses Raphael's translate())
 
  dragStart(x, y, event)

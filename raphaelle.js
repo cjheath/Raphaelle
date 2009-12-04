@@ -106,10 +106,10 @@ Raphael.el.draggable = function(options) {
 	var character = String.fromCharCode(code);
 	// console.log("key="+code+" char="+character);
 	if (code == 27) { // Escape
+	  revert(event);
 	  if (typeof drag_obj.dragCancel != 'undefined') {
 	    drag_obj.dragCancel();
 	  }
-	  revert(event);
 	  cancel();
 	}
       };
