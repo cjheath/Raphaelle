@@ -51,6 +51,11 @@ Raphael.el.draggable = function(options) {
 	// console.log('from page x='+x+', y='+y+' pos left='+pp.left+", top="+pp.top);
 	return {x:x-body_offset.left-pp.left, y:y-body_offset.top-pp.top};
       };
+      drag_obj.paper.toPage = function(x, y) {
+	if (x.pageX >= 0) { y = x.pageY; x = x.pageX; }
+	var pp = $(drag_obj.paper.canvas.parentNode).position();
+	return {x:x+body_offset.left+pp.left, y:y+body_offset.top+pp.top};
+      }
   }
 
   // options.reluctance is the number of pixels of motion before a drag will start:
@@ -101,6 +106,11 @@ Raphael.el.draggable = function(options) {
 	  if (typeof drag_obj.dragStart != 'undefined') {
 	    var canvas_pos = drag_obj.paper.fromPage(event.pageX+delta_x, event.pageY+delta_y);
 	    drag_obj.dragStart(canvas_pos.x, canvas_pos.y, start_event);
+	  }
+	  if (typeof drag_obj.dragUpdate == 'undefined') {
+	    drag_obj.dragUpdate = function(o, dx, dy, e) {
+	      drag_obj.translate(dx, dy);
+	    }
 	  }
 	}
 	if (!started) { return; }
