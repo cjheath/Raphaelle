@@ -25,6 +25,7 @@
  * The escape key can be used to cancel a drag and revert the motion.
  */
 Raphael.el.draggable = function(options) {
+  var handle = this;  // The object you click on
   if (typeof options == 'undefined') { options = {}; }
   var drag_obj = options.drag_obj;
   if (typeof drag_obj == 'undefined') { drag_obj = this; }
@@ -55,14 +56,15 @@ Raphael.el.draggable = function(options) {
 	if (x.pageX >= 0) { y = x.pageY; x = x.pageX; }
 	var pp = $(drag_obj.paper.canvas.parentNode).position();
 	return {x:x+body_offset.left+pp.left, y:y+body_offset.top+pp.top};
-      }
+      };
   }
 
   // options.reluctance is the number of pixels of motion before a drag will start:
   var reluctance = options.reluctance;
   if (typeof reluctance == 'undefined') { reluctance = 3; }
 
-  $(this.node).mousedown(
+  // $(this.node).mousedown(
+  $(this.node).bind('mousedown',
     function (event) {
       var dragging = true;
       var target = typeof event.target != 'undefined' ? event.target : event.srcElement;  // Firefox/IE
@@ -84,6 +86,8 @@ Raphael.el.draggable = function(options) {
       // Figure out what object (other than drag_obj) is under the pointer
       var over = function(event) {
 	drag_obj.hide();
+	var at = paper.toPage(event.clientX, event.clientY);
+	// var dragging_over = document.elementFromPoint(at.x, at.y);
 	var dragging_over = document.elementFromPoint(event.clientX, event.clientY);
 	drag_obj.show();
 	if (dragging_over.nodeType == 3) { dragging_over = dragging_over.parentNode; }	// Safari/Opera
@@ -110,7 +114,7 @@ Raphael.el.draggable = function(options) {
 	  if (typeof drag_obj.dragUpdate == 'undefined') {
 	    drag_obj.dragUpdate = function(o, dx, dy, e) {
 	      drag_obj.translate(dx, dy);
-	    }
+	    };
 	  }
 	}
 	if (!started) { return; }
@@ -134,6 +138,7 @@ Raphael.el.draggable = function(options) {
 	else if (event.which) { code = event.which; }
 	// var character = String.fromCharCode(code);
 	// console.log("key="+code+" char="+character);
+	// alert("key="+code+" char="+character);
 	if (code == 27) { // Escape
 	  revert(event);
 	  if (typeof drag_obj.dragCancel != 'undefined') {
@@ -159,24 +164,23 @@ Raphael.el.draggable = function(options) {
 	    var canvas_pos = drag_obj.paper.fromPage(event);
 	    drag_obj.dragFinish(dropped_on, canvas_pos.x, canvas_pos.y, event);
 	  }
-	  event.stopPropagation();
-	  event.preventDefault();
 	}
 	cancel();
+	return false;
       };
 
       // Undo the setup for a drag
       cancel = function() {
-	$(node.raphael.paper.canvas).unbind('mousemove', mousemove);
-	$(node.raphael.paper.canvas).unbind('keypress', key);
-	$(window).unbind('mouseup', mouseup);
+	$(this.node).unbind('mouseup', mouseup);
+	$(handle.paper.canvas).unbind('mousemove', mousemove);
+	$(window).unbind('keypress', key);
 	dragging = false;
       };
 
       // Bind the appropriate events:
-      $(window).keypress(key);
-      $(node.raphael.paper.canvas).mousemove(mousemove);
-      $(window).mouseup(mouseup);
+      $(window).bind('keypress', key);
+      $(handle.paper.canvas).bind('mousemove', mousemove);
+      $(this.node).bind('mouseup', mouseup);
     }
   );
 };
