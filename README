@@ -17,13 +17,13 @@ Optional methods on drag_obj:
      replaces the default one (which uses Raphael's translate())
 
  dragStart(x, y, event)
-     called (after reluctance) with the mousedown event and location.
+     called (after reluctance) with the mousedown event and canvas location.
 
  dragFinish(dropped_on, x, y, event)
-     called with the mouseup event and location (if not cancelled).
+     called with the mouseup event and canvas location
 
  dragCancel()
-     called if the drag is cancelled (after dragUpdate has reverted the motion)
+     called if the drag is cancelled (after the motion has been reverted)
 
 The escape key can be used to cancel a drag and revert the motion.
 
@@ -42,12 +42,12 @@ Example (resize the rectangle instead of dragging it):
       rect = paper.rect(5, 10, 60, 20, 10).attr({stroke: "#009", "stroke-width": 3});
       rect.draggable({reluctance: 10});
 
-      rect.updateDrag = function(dx, dy, event) {
+      rect.dragUpdate = function(dragging_over, dx, dy, event) {
         rect.attr({
           width: rect.attrs.width + dx,
           height: rect.attrs.height + dy
-        })
-      }
+        });
+      };
 
 MIT License
 
