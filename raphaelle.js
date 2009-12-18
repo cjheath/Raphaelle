@@ -84,7 +84,8 @@ Raphael.el.draggable = function(options) {
 
 	// dragStart is a good place to bring the object to the front so it doesn't drag behind things:
 	if (typeof drag_obj.dragStart != 'undefined') {
-	  var position = $(paper.canvas).offset();
+	  var position = $.browser.opera ? $(drag_obj.paper.canvas.parentNode).offset() : $(drag_obj.paper.canvas).offset();
+	  opera.postError("drag about to start, canvas offset is "+position.left+", "+position.top);
 
 	  drag_obj.dragStart(event.pageX-delta_x-position.left, event.pageY-delta_y-position.top, start_event);
 	}
@@ -137,7 +138,7 @@ Raphael.el.draggable = function(options) {
       if (started) {
 	var dropped_on = over(event);
 	if (typeof drag_obj.dragFinish != 'undefined') {
-	  var position = $(paper.canvas).offset();
+	  var position = $.browser.opera ? $(drag_obj.paper.canvas.parentNode).offset() : $(drag_obj.paper.canvas).offset();
 
 	  drag_obj.dragFinish(dropped_on, event.pageX-position.left, event.pageY-position.top, event);
 	}

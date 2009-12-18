@@ -65,9 +65,9 @@
 	    new_height = 20;
 	  if (new_width < 20)
 	    new_width = 20;
-	  // resizable.attr({width: new_width, height: new_height });
-	  var o = $('#content').offset();
-	  this.attr({width: event.pageX-o.left-this.attr('x'), height: event.pageY-o.top-this.attr('y') });
+	  resizable.attr({width: new_width, height: new_height });
+	  // var o = $('#content').offset();
+	  // this.attr({width: event.pageX-o.left-this.attr('x'), height: event.pageY-o.top-this.attr('y') });
 	  //this.translate(dx, dy);
 	};
 
