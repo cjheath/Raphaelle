@@ -71,6 +71,8 @@ Raphael.el.draggable = function(options) {
       var dragging_over = document.elementFromPoint(event.pageX, event.pageY);
       drag_obj.show();
       if (dragging_over && dragging_over.nodeType == 3) { dragging_over = dragging_over.parentNode; }	// Safari/Opera
+      if (dragging_over.tagName != 'svg' && dragging_over == drag_obj.paper.canvas.parentNode)
+	dragging_over = drag_obj.paper.canvas; // Safari
       return dragging_over;
     };
 
