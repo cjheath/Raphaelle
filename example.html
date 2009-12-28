@@ -2,31 +2,18 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
   <head>
     <title>
-      Raphaelle test
+      Raphaelle drag and drop demonstration
     </title>
     <script src="jquery.js" type="text/javascript"></script>
     <script src="raphael.js" type="text/javascript"></script>
     <script src="raphaelle.js" type="text/javascript"></script>
 
     <style type="text/css" rel="stylesheet" media="screen">
-
-    #frame {
-      position: absolute;
-      overflow: auto;
-      /* top: 10px; left: 10px; right: 10px; bottom: 30px; */
-      /* top: 0px; left: 0px; right: 0px; bottom: 30px; */
-      top: 150px; left: 50px; right: 10px; bottom: 30px;
-      border: 1px solid #0F0;
-    }
-
-    #content {
-      position: absolute;
-      overflow: auto;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-    }
+      #frame {
+	position: absolute; overflow: auto; border: 1px solid #0F0;
+	top: 10px; left: 10px; right: 10px; bottom: 10px;
+      }
+      #content { position: absolute; overflow: auto; top: 0; right: 0; bottom: 0; left: 0; }
     </style>
   </head>
 
@@ -41,40 +28,62 @@
 	paper.canvas.raphael = paper; // .raphael is set for elements but not for the canvas
 	paper.name = "paper";
 
-	var moveable = paper.rect(300, 300, 40, 20, 10);
+	// A simple movable shape. It has a transparent filled background so
+	// you can drag by clicking in the centre, but still see through:
+	var moveable = paper
+	  .rect(200, 200, 40, 20, 10)
+	  .attr({fill: "#000", "fill-opacity": 0, stroke: "#009", "stroke-width": 3});
 	moveable.name = "moveable";
-	moveable.attr({fill: "#000", "fill-opacity": 0, stroke: "#009", "stroke-width": 3});
 	moveable.draggable();
-	moveable.dragStart = function(x, y, e) {
-	  // console.log("dragging "+this.name+" from "+x+", "+y);
-	  this.toFront();
+
+	// Create a rubber band line from this point to the start point
+	var rubberBand = function(from_x, from_y, to_x, to_y) {
+	  var rubber_x = 0, rubber_y = 0;
+	  var rubber_band = paper.path("M0 0").attr({stroke: "#000", "stroke-width": 2});
+	  rubber_band.dragUpdate = function(draggingOver, dx, dy, event) {
+	    rubber_x += dx; rubber_y += dy;
+	    rubber_band.attr({path: "M"+from_x+" "+from_y+"L"+rubber_x+" "+rubber_y});
+	  };
+	  rubber_band.dragUpdate(null, to_x, to_y);
+	  rubber_band.dragFinish = function(dropped_on, x, y, event) {
+	    if (dropped_on)
+	      alert("Dropped on "+dropped_on.raphael.name);
+	    this.dragCancel();
+	  };
+	  rubber_band.dragCancel = function() {
+	    rubber_band.remove();
+	  }
+	  return rubber_band;
+	};
+
+	// When you drag from this handle, a rubber band line appears:
+	var rubber_handle = paper
+	  .circle(200, 30, 4)
+	  .attr({"stroke-width": 4, fill: "#F00"});
+	rubber_handle.dragStart = function(x, y, start_event, event) {
+	  // start_event is the original mousedown, not the current move
+	  if (event.metaKey) return null;	// Don't start the drag until the metaKey is lifted
+	  if (event.shiftKey) return this;	// A shift-drag moves the handle instead of rubber banding
+
+	  var rubber_band = rubberBand(rubber_handle.attr("cx"), rubber_handle.attr("cy"), x, y);
+	  rubber_band.toBack();	// Drag behind other objects
+	  return rubber_band;
 	}
+	rubber_handle.draggable();
 
-	var resizable = paper.rect(5, 20, 100, 40, 10);
-	resizable.attr({fill: "#EEF", stroke: "#009", "stroke-width": 3});
+	// Demonstrate a resizable object with a minimum size
+	var resizable = paper
+	  .rect(5, 20, 100, 40, 10)
+	  .attr({fill: "#EEF", "fill-opacity": 0.7, stroke: "#009", "stroke-width": 3});
 	resizable.name = "resizable";
-	resizable.draggable({reluctance: 20});	// Be reluctant to start resizing
-	resizable.dragStart = function() { this.toFront(); }
-
-	// Resize the rectangle down to a minimum size.
 	resizable.dragUpdate = function(draggingOver, dx, dy, event) {
-	  // console.log("dragUpdate(draggingOver="+draggingOver.raphael.name+", dx="+dx+", dy="+dy+", e)");
 	  var new_width = resizable.attrs.width + dx;
 	  var new_height = resizable.attrs.height + dy;
-	  if (new_height < 20)
-	    new_height = 20;
-	  if (new_width < 20)
-	    new_width = 20;
+	  if (new_height < 20) new_height = 20;
+	  if (new_width < 20) new_width = 20;
 	  resizable.attr({width: new_width, height: new_height });
-	  // var o = $('#content').offset();
-	  // this.attr({width: event.pageX-o.left-this.attr('x'), height: event.pageY-o.top-this.attr('y') });
-	  //this.translate(dx, dy);
 	};
-
-	resizable.dragFinish = function(droppedOn, x, y, event) {
-	  // console.log("Dropped on "+droppedOn.raphael.name+" at "+x+", "+y);
-	  //alert("Done, unbind");
-	};
+	resizable.draggable({reluctance: 20});	// Be reluctant to start resizing
       });
 
     </script>

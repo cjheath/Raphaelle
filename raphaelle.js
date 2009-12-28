@@ -1,43 +1,62 @@
 /*
  * Drag and drop for Raphael elements.
+ *
  * Original Author: Gabe Hollombe. Rewritten several times over by Clifford Heath.
  * (c) Copyright. Subject to MIT License.
  *
  * You need to include jquery and Raphael first.
  *
- * A click and enough motion on this Raphael element causes a drag to start.
+ * When you call draggable() on any Raphael object, it becomes a handle that can start a drag.
+ * A mousedown on the handle followed by enough motion causes a drag to start.
+ *
+ * The dragged object may be the handle itself, another object defined in the options to
+ * draggable(), or an object returned from the handle's dragStart method (if defined).
+ *
+ * The drag proceeds by calling drag_obj.dragUpdate for each mouse motion, see below.
+ * If no dragUpdate is defined, a Raphael translate() is used to provide simple motion.
+ *
+ * If the Escape key is pressed during the drag, the motion is reverted and the drag stops.
+ * In this case, dragCancel will be called, see below.
+ *
+ * When a drag finished normally, dragFinish is called as defined below.
+ *
  * Options:
  *   drag_obj
- *	Start the drag on this object instead of "this".
+ *	Start the drag on this object instead of the handle (else define dragStart to return it).
  *   right_button
- *	unset means drag using either button, otherwise its false or true for left or right.
+ *	unset means drag using either button, otherwise false/true means left/right only.
  *   reluctance
  *	Number of pixels of motion before a drag starts (default 3).
  *
- * Optional methods on drag_obj. The event is passed so you can see the modifier keys.
- *  dragUpdate(dragging_over, dx, dy, event)
- *	override the default, which calls Raphael's translate(dx, dy)
+ * Optional method on handle. The event is passed so you can see the modifier keys.
  *  dragStart(x, y, event)
  *	called (after reluctance) with the mousedown event and canvas location.
+ *	Must return the object to drag. Good place to call toFront so the drag_obj doesn't hide.
+ *
+ * Optional methods on drag_obj. The event is passed so you can see the modifier keys.
+ *  dragUpdate(dragging_over, dx, dy, event)
+ *	dragging_over:	the object under the cursor (after hiding drag_obj)
+ *	dx,dy:		the number of units of motion
+ *	event:		the mousemotion event
  *  dragFinish(dropped_on, x, y, event)
- *	called with the mouseup event and canvas location
+ *	dropped_on:	the object under the cursor (after hiding drag_obj)
+ *	x,y:		the page location
+ *	event:		the mouseup event
  *  dragCancel()
  *	called if the drag is cancelled
- *
- * The escape key can be used to cancel a drag and revert the motion.
  */
 Raphael.el.draggable = function(options) {
   var handle = this;  // The object you click on
-  if (typeof options == 'undefined') { options = {}; }
-  var drag_obj = options.drag_obj;
-  if (typeof drag_obj == 'undefined') { drag_obj = this; }
+  if (!options) { options = {}; }
+  // If you define drag_obj to be null, you must provide a dragStart that returns one:
+  var drag_obj = (typeof options.drag_obj == 'undefined') ? this : options.drag_obj;
 
   // Check that this is an ok thing to even think about doing
-  if (typeof this.node == 'undefined' && typeof this.paper == 'undefined') {
+  if (!(this.node && this.node.raphael)) {
     console.log(this+' is not a Raphael object so you can\'t make it draggable');
     return;
   }
-  if (typeof drag_obj.node == 'undefined' && typeof drag_obj.paper == 'undefined') {
+  if (drag_obj && !(drag_obj.node && drag_obj.node.raphael)) {
     console.log(drag_obj+' is not a Raphael object so you can\'t make it draggable');
     return;
   }
@@ -48,31 +67,29 @@ Raphael.el.draggable = function(options) {
 
   var mousedown = function (event) {
     var dragging = true;
-    var target = typeof event.target != 'undefined' ? event.target : event.srcElement;  // Firefox/IE
+    var target = event.target ? event.target : event.srcElement;  // Firefox/IE
     if (target.nodeType == 3) { target = target.parentNode; }	// Safari
-    // console.log("MouseDown on "+drag_obj.node.id+" with target="+target.id);
+    // console.log("MouseDown on "+this.id+" with target="+target.id);
 
     // Set right_button to true for right-click dragging only, to false for left-click only. Otherwise you get both.
     var right_button = options.right_button;
     if (typeof right_button != 'undefined' && (right_button === false) === (event.button > 1))
       return true;
 
-    var node = this;
-    var started = false;
-    var start_x, start_y;
-    var last_x, last_y;
-    var start_event = event;
-    start_x = last_x = event.pageX;
-    start_y = last_y = event.pageY;
+    var started = false;	// Has the drag started?
+    var start_event = event;	// The starting mousedown
+    var last_x, last_y;		// Where did we move from last
+    last_x = event.pageX;
+    last_y = event.pageY;
 
     // Figure out what object (other than drag_obj) is under the pointer
     var over = function(event) {
-      drag_obj.hide();
+      if (drag_obj) drag_obj.hide();
       var dragging_over = document.elementFromPoint(event.pageX, event.pageY);
-      drag_obj.show();
+      if (drag_obj) drag_obj.show();
       if (dragging_over && dragging_over.nodeType == 3) { dragging_over = dragging_over.parentNode; }	// Safari/Opera
-      if (dragging_over.tagName != 'svg' && dragging_over == drag_obj.paper.canvas.parentNode)
-	dragging_over = drag_obj.paper.canvas; // Safari
+      if (dragging_over && dragging_over.tagName != 'svg' && dragging_over == handle.paper.canvas.parentNode)
+	dragging_over = handle.paper.canvas; // Safari
       return dragging_over;
     };
 
@@ -82,25 +99,22 @@ Raphael.el.draggable = function(options) {
 
       // Figure out if the drag should start
       if (!started && (delta_x>reluctance || delta_x<-reluctance || delta_y>reluctance || delta_y<-reluctance)) {
-	started = true;
 
 	// dragStart is a good place to bring the object to the front so it doesn't drag behind things:
-	if (typeof drag_obj.dragStart != 'undefined') {
-	  var position = $.browser.opera ? $(drag_obj.paper.canvas.parentNode).offset() : $(drag_obj.paper.canvas).offset();
+	if (handle.dragStart) {
+	  var position = $.browser.opera ? $(handle.paper.canvas.parentNode).offset() : $(handle.paper.canvas).offset();
 
-	  drag_obj.dragStart(event.pageX-delta_x-position.left, event.pageY-delta_y-position.top, start_event);
+	  drag_obj = handle.dragStart(event.pageX-delta_x-position.left, event.pageY-delta_y-position.top, start_event, event);
+	  if (!drag_obj) return false; // Don't start the drag yet if told not to
 	}
-	if (typeof drag_obj.dragUpdate == 'undefined') {
-	  drag_obj.dragUpdate = function(o, dx, dy, e) {
-	    drag_obj.translate(dx, dy);
-	  };
-	}
+	started = true;
       }
       if (!started) { return false; }
 
       var dragging_over = over(event);
       // console.log("Move "+drag_obj.node.id+" over "+dragging_over.id+" to X="+event.pageX+", Y="+event.pageY);
-      drag_obj.dragUpdate(dragging_over, delta_x, delta_y, event);
+      var update = drag_obj.dragUpdate ? drag_obj.dragUpdate : function(o, dx, dy, e) { drag_obj.translate(dx, dy); };
+      update(dragging_over, delta_x, delta_y, event);
       last_x = event.pageX;
       last_y = event.pageY;
       return false;
@@ -117,9 +131,8 @@ Raphael.el.draggable = function(options) {
       //alert("key "+event.keyCode);
       if (event.keyCode == 27) { // Escape
 	revert(event);
-	if (typeof drag_obj.dragCancel != 'undefined') {
+	if (drag_obj.dragCancel)
 	  drag_obj.dragCancel();
-	}
 	cancel();
 	return false;
       }
@@ -129,8 +142,8 @@ Raphael.el.draggable = function(options) {
     // Revert to starting location
     revert = function(event) {
       if (!started) { return; }
-      // console.log("start_x="+start_x+", start_y="+start_y+"; last_x="+last_x+", last_y="+last_y);
-      drag_obj.dragUpdate(null, start_x-last_x, start_y-last_y, event);
+      // console.log("start_x="+start_event.pageX+", start_y="+start_event.pageY+"; last_x="+last_x+", last_y="+last_y);
+      drag_obj.dragUpdate(null, start_event.pageX-last_x, start_event.pageY-last_y, event);
       started = false;  // Sometimes get the same event twice.
     };
 
@@ -138,7 +151,7 @@ Raphael.el.draggable = function(options) {
     var mouseup = function(event) {
       if (started) {
 	var dropped_on = over(event);
-	if (typeof drag_obj.dragFinish != 'undefined') {
+	if (drag_obj.dragFinish) {
 	  var position = $.browser.opera ? $(drag_obj.paper.canvas.parentNode).offset() : $(drag_obj.paper.canvas).offset();
 
 	  drag_obj.dragFinish(dropped_on, event.pageX-position.left, event.pageY-position.top, event);
