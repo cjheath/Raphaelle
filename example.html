@@ -47,7 +47,7 @@
 	  rubber_band.dragUpdate(null, to_x, to_y);
 	  rubber_band.dragFinish = function(dropped_on, x, y, event) {
 	    if (dropped_on)
-	      alert("Dropped on "+dropped_on.raphael.name);
+	      alert("Dropped on "+(dropped_on.raphael ? dropped_on.raphael.name : dropped_on.tagName));
 	    this.dragCancel();
 	  };
 	  rubber_band.dragCancel = function() {

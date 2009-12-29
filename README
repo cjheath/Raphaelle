@@ -1,29 +1,57 @@
-An extension to Raphael elements to make them draggable.
+Drag and drop for Raphael elements.
+
+Original Author: Gabe Hollombe. Rewritten several times over by Clifford Heath.
+(c) Copyright. Subject to MIT License.
+
 Just call some_raphael_object.draggable() and you're done.
 Or pass options and/or add methods to customise the behaviour.
+You need to include jquery and Raphael first.
+
+When you call draggable() on any Raphael object, it becomes a handle that can start a drag.
+A mousedown on the handle followed by enough motion causes a drag to start.
+
+The dragged object may be the handle itself, another object defined in the options to
+draggable(), or an object returned from the handle's dragStart method (if defined).
+
+The drag proceeds by calling drag_obj.dragUpdate for each mouse motion, see below.
+If no dragUpdate is defined, a Raphael translate() is used to provide simple motion.
+
+If the Escape key is pressed during the drag, the motion is reverted and the drag stops.
+In this case, dragCancel will be called, see below.
+
+When a drag finished normally, dragFinish is called as defined below.
 
 Options:
+
   drag_obj
-     Start the drag on this object instead of "this".
+	Start the drag on this object instead of the handle (else define dragStart to return it).
+
   right_button
-     leave undefined to drag using either button, otherwise set to
-     false or true for left or right button only.
+	unset means drag using either button, otherwise false/true means left/right only.
+
   reluctance
-     Number of pixels of motion before a drag starts (default 3).
+	Number of pixels of motion before a drag starts (default 3).
 
-Optional methods on drag_obj:
+Optional method on handle. The event is passed so you can see the modifier keys.
 
- dragUpdate(dragging_over, delta_x, delta_y, event)
-     replaces the default one (which uses Raphael's translate())
+  dragStart(x, y, mousedownevent, mousemoveevent)
+	called (after reluctance) with the mousedown event and canvas location.
+	Must return the object to drag. Good place to call toFront so the drag_obj doesn't hide.
 
- dragStart(x, y, event)
-     called (after reluctance) with the mousedown event and canvas location.
+Optional methods on drag_obj. The event is passed so you can see the modifier keys.
 
- dragFinish(dropped_on, x, y, event)
-     called with the mouseup event and canvas location
+  dragUpdate(dragging_over, dx, dy, event)
+	dragging_over:	the object under the cursor (after hiding drag_obj)
+	dx,dy:		the number of units of motion
+	event:		the mousemotion event
 
- dragCancel()
-     called if the drag is cancelled (after the motion has been reverted)
+  dragFinish(dropped_on, x, y, event)
+	dropped_on:	the object under the cursor (after hiding drag_obj)
+	x,y:		the page location
+	event:		the mouseup event
+
+  dragCancel()
+	called if the drag is cancelled
 
 The escape key can be used to cancel a drag and revert the motion.
 
@@ -48,6 +76,8 @@ Example (resize the rectangle instead of dragging it):
           height: rect.attrs.height + dy
         });
       };
+
+See example.html for further examples.
 
 MIT License
 
