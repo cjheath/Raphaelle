@@ -82,9 +82,14 @@ Raphael.el.draggable = function(options) {
       // Unfortunately Opera's elementFromPoint seems to be hopelessly broken in SVG
       var dragging_over = document.elementFromPoint(event.pageX, event.pageY);
       if (drag_obj) drag_obj.show();
-      if (dragging_over && dragging_over.nodeType == 3) dragging_over = dragging_over.parentNode;	// Safari/Opera
-      if (dragging_over && dragging_over.tagName != 'svg' && dragging_over == handle.paper.canvas.parentNode)
-	dragging_over = handle.paper.canvas; // Safari
+      if (!dragging_over)
+	return null;
+      if (dragging_over.nodeType == 3)
+	return dragging_over.parentNode;  // Safari/Opera
+      if (dragging_over.tagName != 'svg' && dragging_over == handle.paper.canvas.parentNode)
+	return handle.paper.canvas;	  // Safari
+      if (!dragging_over.raphael)
+	return dragging_over.parentNode;  // A tspan inside a Raphael text object perhaps?
       return dragging_over;
     };
 
@@ -139,13 +144,15 @@ Raphael.el.draggable = function(options) {
       if (started) {
 	var dropped_on = over(event);
 	if (drag_obj.dragFinish) {
-	  var position = $.browser.opera ? $(drag_obj.paper.canvas.parentNode).offset() : $(drag_obj.paper.canvas).offset();
+	  var position = $.browser.opera ? $(handle.paper.canvas.parentNode).offset() : $(handle.paper.canvas).offset();
 
 	  drag_obj.dragFinish(dropped_on, event.pageX-position.left, event.pageY-position.top, event);
 	}
+	cancel();
+	return false; // Don't let it bubble
       }
       cancel();
-      return started ? false : true;  // Let the mouseup bubble if we didn't start dragging
+      return true;
     };
 
     // Undo event bindings after the drag
@@ -158,6 +165,7 @@ Raphael.el.draggable = function(options) {
 	$(this.node).unbind('mousedown', mousedown);
 	$(this.node).bind('mousedown', mousedown);
       }
+      started = false;
     };
 
     // Bind the appropriate events for the duration of the drag:
