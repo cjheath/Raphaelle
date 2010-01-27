@@ -68,7 +68,7 @@ Raphael.el.draggable = function(options) {
   var reluctance = options.reluctance;
   if (typeof reluctance == 'undefined') reluctance = 3;
 
-  var mousedown = function (event) {
+  var mousedown = function(event) {
     if (typeof right_button != 'undefined' && (right_button === false) === (event.button > 1))
       return true;
 
@@ -78,6 +78,8 @@ Raphael.el.draggable = function(options) {
 
     // Figure out what object (other than drag_obj) is under the pointer
     var over = function(event) {
+      var paper = handle.paper || drag_obj.paper;
+      if (!paper) return null;	// Something was deleted
       if (drag_obj) drag_obj.hide();
       // Unfortunately Opera's elementFromPoint seems to be hopelessly broken in SVG
       var dragging_over = document.elementFromPoint(event.pageX, event.pageY);
@@ -86,8 +88,10 @@ Raphael.el.draggable = function(options) {
 	return null;
       if (dragging_over.nodeType == 3)
 	return dragging_over.parentNode;  // Safari/Opera
-      if (dragging_over.tagName != 'svg' && dragging_over == handle.paper.canvas.parentNode)
-	return handle.paper.canvas;	  // Safari
+      if (dragging_over.tagName != 'svg' && dragging_over == paper.canvas.parentNode)
+	return paper.canvas;	  // Safari
+      if (dragging_over == paper.canvas)
+	return dragging_over;
       if (!dragging_over.raphael)
 	return dragging_over.parentNode;  // A tspan inside a Raphael text object perhaps?
       return dragging_over;
@@ -106,7 +110,7 @@ Raphael.el.draggable = function(options) {
 	}
 	started = true;
       }
-      if (!started) return false;
+      if (!started || !drag_obj) return false;
 
       var dragging_over = over(event);
       // console.log("Move "+drag_obj.node.id+" over "+dragging_over.id+" to X="+event.pageX+", Y="+event.pageY);
@@ -135,7 +139,8 @@ Raphael.el.draggable = function(options) {
     // Revert to starting location
     revert = function(event) {
       if (!started) return;
-      drag_obj.dragUpdate(null, start_event.pageX-last_x, start_event.pageY-last_y, event);
+      if (drag_obj.dragUpdate)
+	drag_obj.dragUpdate(null, start_event.pageX-last_x, start_event.pageY-last_y, event);
       started = false;  // Sometimes get the same event twice.
     };
 
@@ -172,6 +177,8 @@ Raphael.el.draggable = function(options) {
     $(document).bind('keydown', key);
     $(document).bind('mousemove', mousemove);
     $(document).bind('mouseup', mouseup);
+
+    event.stopImmediatePropagation(); // Ensure that whatever drag we start, there's only one!
     return false;
   };
   $(handle.node).bind('mousedown', mousedown);
