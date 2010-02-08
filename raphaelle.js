@@ -71,10 +71,12 @@ Raphael.el.draggable = function(options) {
   var reluctance = options.reluctance;
   if (typeof reluctance == 'undefined') reluctance = 3;
 
+  var skip_click;
   var mousedown = function(event) {
     if (typeof right_button != 'undefined' && (right_button === false) === (event.button > 1))
       return true;
 
+    skip_click = false;		// Used to skip a click after dragging
     var started = false;	// Has the drag started?
     var start_event = event;	// The starting mousedown
     var last_x = event.pageX, last_y = event.pageY;	// Where did we move from last?
@@ -113,6 +115,7 @@ Raphael.el.draggable = function(options) {
 	  drag_obj = o;
 	}
 	started = true;
+	skip_click = true;
       }
       if (!started || !drag_obj) return false;
 
@@ -129,7 +132,7 @@ Raphael.el.draggable = function(options) {
     var cancel;
 
     // Process keyboard input so we can cancel
-    var key = function(event) {
+    var keydown = function(event) {
       if (event.keyCode == 27) { // Escape
 	revert(event);
 	if (drag_obj.dragCancel)
@@ -158,32 +161,42 @@ Raphael.el.draggable = function(options) {
 	  drag_obj.dragFinish(dropped_on, event.pageX-position.left, event.pageY-position.top, event);
 	}
 	cancel();
-	return false; // Don't let it bubble
+	return true; // Don't let it bubble
       }
       cancel();
       return true;
     };
 
     // Undo event bindings after the drag
+    handle.originalDraggableNode = handle.node;
     cancel = function() {
       $(document).unbind('mouseup', mouseup);
       $(document).unbind('mousemove', mousemove);
-      $(document).unbind('keydown', key);
+      $(document).unbind('keydown', keydown);
       if ($.browser.msie) {
-	// Rebind the mousedown, it gets lost somehow
-	$(this.node).unbind('mousedown', mousedown);
-	$(this.node).bind('mousedown', mousedown);
+	// Rebind the mousedown if it got lost when the node was recreated:
+	if (handle.originalDraggableNode != handle.node)
+	  $(handle.node).bind('mousedown', mousedown);
+	handle.originalDraggableNode = handle.node;
       }
+
       started = false;
     };
 
     // Bind the appropriate events for the duration of the drag:
-    $(document).bind('keydown', key);
+    $(document).bind('keydown', keydown);
     $(document).bind('mousemove', mousemove);
     $(document).bind('mouseup', mouseup);
 
     event.stopImmediatePropagation(); // Ensure that whatever drag we start, there's only one!
     return false;
   };
+  var click = function(event) {
+    if (skip_click)
+      event.stopImmediatePropagation();
+    skip_click = false;		// Used to skip a click after dragging
+    return true;
+  };
   $(handle.node).bind('mousedown', mousedown);
+  $(handle.node).bind('click', click);	  // Bind click now so that we can stop other click handlers
 };

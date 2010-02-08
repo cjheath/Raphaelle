@@ -35,6 +35,9 @@
 	  .attr({fill: "#000", "fill-opacity": 0, stroke: "#009", "stroke-width": 3});
 	moveable.name = "moveable";
 	moveable.draggable();
+	$(moveable.node).bind('click', function(e) { alert("moveable clicked!"); });
+	moveable.name = "moveable";
+	moveable.node.name = "moveable.node";
 
 	// Create a rubber band line from this point to the start point
 	var rubberBand = function(from_x, from_y, to_x, to_y) {
@@ -70,12 +73,16 @@
 	  return rubber_band;
 	};
 	rubber_handle.draggable();
+	$(rubber_handle.node).bind('click', function(e) { alert("rubber_handle clicked!"); });
+	rubber_handle.name = "rubber_handle";
+	rubber_handle.node.name = "rubber_handle.node";
 
 	// Demonstrate a resizable object with a minimum size
 	var resizable = paper
 	  .rect(5, 20, 100, 40, 10)
 	  .attr({fill: "#EEF", "fill-opacity": 0.7, stroke: "#009", "stroke-width": 3});
 	resizable.name = "resizable";
+	resizable.lastNode = resizable.node;
 	resizable.dragUpdate = function(draggingOver, dx, dy, event) {
 	  var new_width = resizable.attrs.width + dx;
 	  var new_height = resizable.attrs.height + dy;
@@ -83,7 +90,18 @@
 	  if (new_width < 20) new_width = 20;
 	  resizable.attr({width: new_width, height: new_height });
 	};
+	// Special handling for clicked(), because the node gets recreated so the binding gets lost:
+	resizable.clicked = function(e) { alert("resizable clicked!"); };
+	resizable.dragFinish = function(droppedOn, x, y, event) {
+	  if (resizable.lastNode == resizable.node) return;
+	  $(resizable.node).bind('click', resizable.clicked);
+	  resizable.lastNode = resizable.node;
+	};
+	$(resizable.node).bind('click', resizable.clicked);
+
 	resizable.draggable({reluctance: 20});	// Be reluctant to start resizing
+	resizable.name = "resizable";
+	resizable.node.name = "resizable.node";
       });
 
     </script>
