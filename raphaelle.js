@@ -22,13 +22,15 @@
  *
  * Options:
  *   drag_obj
- *	Start the drag on this object instead of the handle (else define dragStart to return it).
+ *	A click on the handle will start a drag on this object.
+ *	Otherwise handle will be dragged, unless handle.dragStart()
+ *	returns a different draggable object.
  *   right_button
  *	unset means drag using either button, otherwise false/true means left/right only.
  *   reluctance
  *	Number of pixels of motion before a drag starts (default 3).
  *
- * Optional method on handle. The event is passed so you can see the modifier keys.
+ * Optional method on handle. The events are passed so you can see the modifier keys.
  *  dragStart(x, y, mousedownevent, mousemoveevent)
  *	called (after reluctance) with the mousedown event and canvas location.
  *	Must return the object to drag. Good place to call toFront so the drag_obj doesn't hide.
@@ -45,6 +47,7 @@
  *  dragCancel()
  *	called if the drag is cancelled
  */
+
 Raphael.el.draggable = function(options) {
   var handle = this;  // The object you click on
   if (!options) options = {};
@@ -105,8 +108,9 @@ Raphael.el.draggable = function(options) {
 	if (handle.dragStart) {
 	  var position = $.browser.opera ? $(handle.paper.canvas.parentNode).offset() : $(handle.paper.canvas).offset();
 
-	  drag_obj = handle.dragStart(event.pageX-delta_x-position.left, event.pageY-delta_y-position.top, start_event, event);
-	  if (!drag_obj) return false; // Don't start the drag yet if told not to
+	  var o = handle.dragStart(event.pageX-delta_x-position.left, event.pageY-delta_y-position.top, start_event, event);
+	  if (!o) return false; // Don't start the drag yet if told not to
+	  drag_obj = o;
 	}
 	started = true;
       }
@@ -139,7 +143,7 @@ Raphael.el.draggable = function(options) {
     // Revert to starting location
     revert = function(event) {
       if (!started) return;
-      if (drag_obj.dragUpdate)
+      if (drag_obj && drag_obj.dragUpdate)
 	drag_obj.dragUpdate(null, start_event.pageX-last_x, start_event.pageY-last_y, event);
       started = false;  // Sometimes get the same event twice.
     };
@@ -148,7 +152,7 @@ Raphael.el.draggable = function(options) {
     var mouseup = function(event) {
       if (started) {
 	var dropped_on = over(event);
-	if (drag_obj.dragFinish) {
+	if (drag_obj && drag_obj.dragFinish) {
 	  var position = $.browser.opera ? $(handle.paper.canvas.parentNode).offset() : $(handle.paper.canvas).offset();
 
 	  drag_obj.dragFinish(dropped_on, event.pageX-position.left, event.pageY-position.top, event);

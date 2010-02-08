@@ -52,7 +52,7 @@
 	  };
 	  rubber_band.dragCancel = function() {
 	    rubber_band.remove();
-	  }
+	  };
 	  return rubber_band;
 	};
 
@@ -68,7 +68,7 @@
 	  var rubber_band = rubberBand(rubber_handle.attr("cx"), rubber_handle.attr("cy"), x, y);
 	  rubber_band.toBack();	// Drag behind other objects
 	  return rubber_band;
-	}
+	};
 	rubber_handle.draggable();
 
 	// Demonstrate a resizable object with a minimum size

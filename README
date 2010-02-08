@@ -24,7 +24,9 @@ When a drag finished normally, dragFinish is called as defined below.
 Options:
 
   drag_obj
-	Start the drag on this object instead of the handle (else define dragStart to return it).
+	A click on the handle will start a drag on this object.
+	Otherwise handle will be dragged, unless handle.dragStart()
+	returns a different draggable object.
 
   right_button
 	unset means drag using either button, otherwise false/true means left/right only.
@@ -32,7 +34,7 @@ Options:
   reluctance
 	Number of pixels of motion before a drag starts (default 3).
 
-Optional method on handle. The event is passed so you can see the modifier keys.
+Optional method on handle. The events are passed so you can see the modifier keys.
 
   dragStart(x, y, mousedownevent, mousemoveevent)
 	called (after reluctance) with the mousedown event and canvas location.
