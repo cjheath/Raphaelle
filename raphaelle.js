@@ -128,6 +128,14 @@ Raphael.el.draggable = function(options) {
       return false;
     };
 
+    if (reluctance == 0 && handle.dragStart) {
+      var o = handle.dragStart(0, 0, event, event);
+      if (!o) return false;
+      drag_obj = o;
+      started = true;
+      skip_click = true;
+    }
+
     var revert;
     var cancel;
 
