@@ -79,15 +79,32 @@ Raphael.el.draggable = function(options) {
     skip_click = false;		// Used to skip a click after dragging
     var started = false;	// Has the drag started?
     var start_event = event;	// The starting mousedown
-    var last_x = event.pageX, last_y = event.pageY;	// Where did we move from last?
+    var last_x = event.clientX, last_y = event.clientY;	// Where did we move from last?
 
     // Figure out what object (other than drag_obj) is under the pointer
     var over = function(event) {
       var paper = handle.paper || drag_obj.paper;
       if (!paper) return null;	// Something was deleted
       if (drag_obj) drag_obj.hide();
-      // Unfortunately Opera's elementFromPoint seems to be hopelessly broken in SVG
-      var dragging_over = document.elementFromPoint(event.pageX, event.pageY);
+      var dragging_over = document.elementFromPoint(event.clientX, event.clientY);
+      if ($.browser.opera && dragging_over.tagName === 'svg') {
+	// Opera's elementFromPoint always returns the SVG object.
+	var svg = paper.canvas;
+	var so = $(svg).offset();
+	// var so = canvas_offset(svg);
+	var sr = svg.createSVGRect();
+	sr.x = event.clientX-so.left;
+	sr.y = event.clientY-so.top;
+	sr.width = sr.height = 1;
+	var hits = svg.getIntersectionList(sr, null);
+	if (hits.length > 0)
+	{
+	 dragging_over = hits[hits.length-1];
+	 // drag_obj.hide() probably hasn't taken effect yet. Hope it's not a compound object:
+	 if (dragging_over == drag_obj.node && hits.length > 1)
+	   dragging_over = hits[hits.length-2];
+	}
+      }
       if (drag_obj) drag_obj.show();
       if (!dragging_over)
 	return null;
@@ -102,15 +119,26 @@ Raphael.el.draggable = function(options) {
       return dragging_over;
     };
 
+    var canvas_offset = function(canvas) {
+      if (!$.browser.opera && canvas.getClientRects)
+      {
+	// This works around a bug in Chrome 8.0.552.215
+	var cr = canvas.getClientRects()[0];
+	return {top: cr.top, left: cr.left };
+      }
+      return jQuery(canvas).offset();
+    }
+
     var mousemove = function(event) {
-      var delta_x = event.pageX-last_x;
-      var delta_y = event.pageY-last_y;
+      // REVISIT: Need to use some_svg_element_node.getScreenCTM() with SVG zooming comes into play
+      var delta_x = event.clientX-last_x;
+      var delta_y = event.clientY-last_y;
 
-      if (!started && (delta_x>reluctance || delta_x<-reluctance || delta_y>reluctance || delta_y<-reluctance)) {
+      if (!started && (delta_x>=reluctance || delta_x<=-reluctance || delta_y>=reluctance || delta_y<=-reluctance)) {
 	if (handle.dragStart) {
-	  var position = $.browser.opera ? $(handle.paper.canvas.parentNode).offset() : $(handle.paper.canvas).offset();
+	  var position = canvas_offset(handle.paper.canvas);
 
-	  var o = handle.dragStart(event.pageX-delta_x-position.left, event.pageY-delta_y-position.top, start_event, event);
+	  var o = handle.dragStart(event.clientX-delta_x-position.left, event.clientY-delta_y-position.top, start_event, event);
 	  if (!o) return false; // Don't start the drag yet if told not to
 	  drag_obj = o;
 	}
@@ -120,11 +148,12 @@ Raphael.el.draggable = function(options) {
       if (!started || !drag_obj) return false;
 
       var dragging_over = over(event);
-      // console.log("Move "+drag_obj.node.id+" over "+dragging_over.id+" to X="+event.pageX+", Y="+event.pageY);
+      // console.log("Move "+drag_obj.node.id+" over "+dragging_over.id+" to X="+event.clientX+", Y="+event.clientY);
       var update = drag_obj.dragUpdate ? drag_obj.dragUpdate : function(o, dx, dy, e) { drag_obj.translate(dx, dy); };
       update(dragging_over, delta_x, delta_y, event);
-      last_x = event.pageX;
-      last_y = event.pageY;
+      handle.paper.safari();
+      last_x = event.clientX;
+      last_y = event.clientY;
       return false;
     };
 
@@ -155,7 +184,7 @@ Raphael.el.draggable = function(options) {
     revert = function(event) {
       if (!started) return;
       if (drag_obj && drag_obj.dragUpdate)
-	drag_obj.dragUpdate(null, start_event.pageX-last_x, start_event.pageY-last_y, event);
+	drag_obj.dragUpdate(null, start_event.clientX-last_x, start_event.clientY-last_y, event);
       started = false;  // Sometimes get the same event twice.
     };
 
@@ -164,9 +193,9 @@ Raphael.el.draggable = function(options) {
       if (started) {
 	var dropped_on = over(event);
 	if (drag_obj && drag_obj.dragFinish) {
-	  var position = $.browser.opera ? $(handle.paper.canvas.parentNode).offset() : $(handle.paper.canvas).offset();
+	  var position = canvas_offset(handle.paper.canvas);
 
-	  drag_obj.dragFinish(dropped_on, event.pageX-position.left, event.pageY-position.top, event);
+	  drag_obj.dragFinish(dropped_on, event.clientX-position.left, event.clientY-position.top, event);
 	}
 	cancel();
 	return true; // Don't let it bubble
@@ -187,6 +216,7 @@ Raphael.el.draggable = function(options) {
 	  $(handle.node).bind('mousedown', mousedown);
 	handle.originalDraggableNode = handle.node;
       }
+      handle.paper.safari();
 
       started = false;
     };

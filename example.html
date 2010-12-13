@@ -10,7 +10,8 @@
 
     <style type="text/css" rel="stylesheet" media="screen">
       #frame {
-	position: absolute; overflow: auto; border: 1px solid #0F0;
+	position: absolute; overflow: auto;
+	border: 1px solid #0F0;
 	top: 10px; left: 10px; right: 10px; bottom: 10px;
       }
       #content { position: absolute; overflow: auto; top: 0; right: 0; bottom: 0; left: 0; }
@@ -72,7 +73,7 @@
 	  rubber_band.toBack();	// Drag behind other objects
 	  return rubber_band;
 	};
-	rubber_handle.draggable();
+	rubber_handle.draggable({reluctance: 1});
 	$(rubber_handle.node).bind('click', function(e) { alert("rubber_handle clicked!"); });
 	rubber_handle.name = "rubber_handle";
 	rubber_handle.node.name = "rubber_handle.node";
