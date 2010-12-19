@@ -15,6 +15,10 @@
 	top: 10px; left: 10px; right: 10px; bottom: 10px;
       }
       #content { position: absolute; overflow: auto; top: 0; right: 0; bottom: 0; left: 0; }
+      #help {
+	position: absolute;
+	bottom: 20px; left: 20px;
+      }
     </style>
   </head>
 
@@ -22,23 +26,38 @@
     <div id="frame">
       <div id="content"></div>
     </div>
+
+    <div id="help">
+      This example demonstrates the following behaviours using three objects (resizable, rubber-handle, movable):
+      <ul>
+      <li>All objects that support drag produce "click" if you release without dragging. (BUG: also when you did drag)</li>
+      <li>One object is a normal draggable (default behaviour), the others resize & rubber-band (custom behaviour).</li>
+      <li>The top-left rectangle has a large "reluctance", meaning the resize doesn't start after 3 pixels.</li>
+      <li>Releasing a drag over other objects alerts the name of the object dropped on (hit testing).</li>
+      <li>The bottom right shape has a transparent fill, so you can drag and drop in there.</li>
+      <li>Dragging supports cancellation without dropping by hitting the "Escape" key.</li>
+      <li>the canvas resizes to fill the browser window.</li>
+      <li>shift-key dragging the rubber-handle moves it, instead of rubber-banding.</li>
+      <li>meta-key drag on the rubber-handle is disabled, but if you lift the metakey while still dragging, the drag starts.</li>
+      <li>the resizable rectangle has a minimum size enforced in the code.</li>
+      </ul>
+    </div>
+
     <script type="text/javascript">
 
       $(document).ready(function() {
 	paper = Raphael('content', "100%", "100%");
-	paper.canvas.raphael = paper; // .raphael is set for elements but not for the canvas
-	paper.name = "paper";
+	paper.canvas.raphael = paper;		// .raphael is set for elements but not for the canvas
+	paper.name = "paper";			// For messages
 
 	// A simple movable shape. It has a transparent filled background so
 	// you can drag by clicking in the centre, but still see through:
 	var moveable = paper
 	  .rect(200, 200, 40, 20, 10)
 	  .attr({fill: "#000", "fill-opacity": 0, stroke: "#009", "stroke-width": 3});
-	moveable.name = "moveable";
+	moveable.name = "moveable";	      // For messages
 	moveable.draggable();
-	$(moveable.node).bind('click', function(e) { alert("moveable clicked!"); });
-	moveable.name = "moveable";
-	moveable.node.name = "moveable.node";
+	moveable.click(function(e) { alert("moveable clicked!"); });
 
 	// Create a rubber band line from this point to the start point
 	var rubberBand = function(from_x, from_y, to_x, to_y) {
@@ -74,16 +93,14 @@
 	  return rubber_band;
 	};
 	rubber_handle.draggable({reluctance: 1});
-	$(rubber_handle.node).bind('click', function(e) { alert("rubber_handle clicked!"); });
-	rubber_handle.name = "rubber_handle";
-	rubber_handle.node.name = "rubber_handle.node";
+	rubber_handle.click(function(e) { alert("rubber_handle clicked!"); });
+	rubber_handle.name = "rubber_handle";	// For messages
 
 	// Demonstrate a resizable object with a minimum size
 	var resizable = paper
 	  .rect(5, 20, 100, 40, 10)
 	  .attr({fill: "#EEF", "fill-opacity": 0.7, stroke: "#009", "stroke-width": 3});
 	resizable.name = "resizable";
-	resizable.lastNode = resizable.node;
 	resizable.dragUpdate = function(draggingOver, dx, dy, event) {
 	  var new_width = resizable.attrs.width + dx;
 	  var new_height = resizable.attrs.height + dy;
@@ -91,18 +108,10 @@
 	  if (new_width < 20) new_width = 20;
 	  resizable.attr({width: new_width, height: new_height });
 	};
-	// Special handling for clicked(), because the node gets recreated so the binding gets lost:
 	resizable.clicked = function(e) { alert("resizable clicked!"); };
-	resizable.dragFinish = function(droppedOn, x, y, event) {
-	  if (resizable.lastNode == resizable.node) return;
-	  $(resizable.node).bind('click', resizable.clicked);
-	  resizable.lastNode = resizable.node;
-	};
-	$(resizable.node).bind('click', resizable.clicked);
-
+	resizable.click(resizable.clicked);
 	resizable.draggable({reluctance: 20});	// Be reluctant to start resizing
-	resizable.name = "resizable";
-	resizable.node.name = "resizable.node";
+	resizable.name = "resizable";		// For messages
       });
 
     </script>
