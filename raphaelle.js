@@ -1,6 +1,8 @@
 /*
  * Drag and drop for Raphael elements.
  *
+ * Requires jQuery, to bind mouse events on document.
+ *
  * Original Author: Gabe Hollombe. Rewritten several times over by Clifford Heath.
  * (c) Copyright. Subject to MIT License.
  *
@@ -39,7 +41,10 @@
  * Optional method on handle. The events are passed so you can see the modifier keys.
  *  dragStart(x, y, mousedownevent, mousemoveevent)
  *	called (after reluctance) with the mousedown event and canvas location.
- *	Must return the object to drag. Good place to call toFront so the drag_obj doesn't hide.
+ *	Must return either:
+ *	- the object to drag. A good place to call toFront so the drag_obj doesn't hide.
+ *	- null or false. The drag won't start yet, and dragStart will be called again.
+ *	- true. The drag won't start, but the mouseDown event should bubble.
  *
  * Optional methods on drag_obj. The event is passed so you can see the modifier keys.
  *  dragUpdate(dragging_over, dx, dy, event)
@@ -159,7 +164,8 @@ Raphael.el.draggable = function(options) {
 	  position = canvas_offset(handle.paper.canvas);
 
 	  var o = handle.dragStart(event.clientX-delta_x-position.left, event.clientY-delta_y-position.top, startEvent, event);
-	  if (!o) return false; // Don't start the drag yet if told not to
+	  if (!o || o === true)
+	    return !!o; // Don't start the drag yet if told not to
 	  drag_obj = o;
 	}
 	started = true;
@@ -180,7 +186,8 @@ Raphael.el.draggable = function(options) {
     if (!started && reluctance === 0 && handle.dragStart) {
       var position = canvas_offset(handle.paper.canvas);
       var o = handle.dragStart(startClientX-position.left, startClientY-position.top, startEvent, startEvent);
-      if (!o) return false;
+      if (!o || o === true)
+	return !!o; // Don't start the drag yet if told not to
       drag_obj = o;
       started = true;
       skip_click = true;
@@ -219,6 +226,7 @@ Raphael.el.draggable = function(options) {
 	  drag_obj.dragFinish(dropped_on, event.clientX-position.left, event.clientY-position.top, event);
 	}
 	cancel();
+	skip_click = true;
 	return true; // Don't let it bubble
       }
       cancel();
@@ -226,17 +234,10 @@ Raphael.el.draggable = function(options) {
     };
 
     // Undo event bindings after the drag
-    handle.originalDraggableNode = handle.node;
     cancel = function() {
       $(document).unbind('mouseup', mouseup);
       $(document).unbind('mousemove', mousemove);
       $(document).unbind('keydown', keydown);
-      if ($.browser.msie) {
-	// Rebind the mousedown if it got lost when the node was recreated:
-	if (handle.originalDraggableNode != handle.node)
-	  $(handle.node).bind('mousedown', mousedown);
-	handle.originalDraggableNode = handle.node;
-      }
       handle.paper.safari();
 
       started = false;
@@ -250,21 +251,24 @@ Raphael.el.draggable = function(options) {
   };
 
   var mousedown = function(event) {
+    event = jQuery.event.fix(event);
     if (typeof right_button != 'undefined' && (right_button === false) === (event.button > 1))
       return true;
-    dragNow(drag_obj, event);
-    event.stopImmediatePropagation(); // Ensure that whatever drag we start, there's only one!
-    return false;
+    var bubble = dragNow(drag_obj, event);
+    if (!bubble)
+      event.stopImmediatePropagation(); // Ensure that whatever drag we start, there's only one!
+    return bubble;
   };
 
   var click = function(event) {
+    event = jQuery.event.fix(event);
     if (skip_click)
       event.stopImmediatePropagation();
     skip_click = false;		// Used to skip a click after dragging
     return true;
   };
-  $(handle.node).bind('mousedown', mousedown);
-  $(handle.node).bind('click', click);	  // Bind click now so that we can stop other click handlers
+  handle.mousedown(mousedown);
+  handle.click(click);	  // Bind click now so that we can stop other click handlers
 
   /*
    * Start a drag immediately, using the drag_obj passed,
