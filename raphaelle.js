@@ -12,6 +12,12 @@
  * The dragged object may be the handle itself, another object defined in the options to
  * draggable(), or an object returned from the handle's dragStart method (if defined).
  *
+ * In addition, if you wish to immediately start a drag on a draggable object, just
+ * call object.draggable.drag(), and pass the event (if available) that has a valid
+ * clientX, clientY value for the current mouse position. If you don't have it, the
+ * drag will appear to have started from 0,0 in the current parent, and will jump to
+ * the mouse position on the first move. Awkward, but sometimes useful...
+ *
  * The drag proceeds by calling drag_obj.dragUpdate for each mouse motion, see below.
  * If no dragUpdate is defined, a Raphael translate() is used to provide simple motion.
  *
@@ -72,14 +78,18 @@ Raphael.el.draggable = function(options) {
   if (typeof reluctance == 'undefined') reluctance = 3;
 
   var skip_click;
-  var mousedown = function(event) {
-    if (typeof right_button != 'undefined' && (right_button === false) === (event.button > 1))
-      return true;
 
+  var dragNow = function(drag_obj, startEvent, startImmediately) {
     skip_click = false;		// Used to skip a click after dragging
     var started = false;	// Has the drag started?
-    var start_event = event;	// The starting mousedown
-    var last_x = event.clientX, last_y = event.clientY;	// Where did we move from last?
+    var last_x = startEvent && startEvent.clientX,	// Where did we move from last?
+	last_y = startEvent && startEvent.clientY;
+    var startClientX = last_x, startClientY = last_y;
+
+    if (startImmediately) {
+      started = true;
+      skip_click = true;
+    }
 
     // Figure out what object (other than drag_obj) is under the pointer
     var over = function(event) {
@@ -127,18 +137,28 @@ Raphael.el.draggable = function(options) {
 	return {top: cr.top, left: cr.left };
       }
       return jQuery(canvas).offset();
-    }
+    };
 
     var mousemove = function(event) {
-      // REVISIT: Need to use some_svg_element_node.getScreenCTM() with SVG zooming comes into play
-      var delta_x = event.clientX-last_x;
-      var delta_y = event.clientY-last_y;
+      var position;
+      var delta_x, delta_y;
+      if (last_x === undefined || last_x === null) {  // From startImmediately
+	position = canvas_offset(handle.paper.canvas);
+	delta_x = last_x = event.clientX-position.left;
+	delta_y = last_y = event.clientY-position.top;
+	drag_obj.show();
+      }
+      else
+      {
+	delta_x = event.clientX-last_x;
+	delta_y = event.clientY-last_y;
+      }
 
       if (!started && (delta_x>=reluctance || delta_x<=-reluctance || delta_y>=reluctance || delta_y<=-reluctance)) {
 	if (handle.dragStart) {
-	  var position = canvas_offset(handle.paper.canvas);
+	  position = canvas_offset(handle.paper.canvas);
 
-	  var o = handle.dragStart(event.clientX-delta_x-position.left, event.clientY-delta_y-position.top, start_event, event);
+	  var o = handle.dragStart(event.clientX-delta_x-position.left, event.clientY-delta_y-position.top, startEvent, event);
 	  if (!o) return false; // Don't start the drag yet if told not to
 	  drag_obj = o;
 	}
@@ -157,8 +177,9 @@ Raphael.el.draggable = function(options) {
       return false;
     };
 
-    if (reluctance == 0 && handle.dragStart) {
-      var o = handle.dragStart(0, 0, event, event);
+    if (!started && reluctance === 0 && handle.dragStart) {
+      var position = canvas_offset(handle.paper.canvas);
+      var o = handle.dragStart(startClientX-position.left, startClientY-position.top, startEvent, startEvent);
       if (!o) return false;
       drag_obj = o;
       started = true;
@@ -184,7 +205,7 @@ Raphael.el.draggable = function(options) {
     revert = function(event) {
       if (!started) return;
       if (drag_obj && drag_obj.dragUpdate)
-	drag_obj.dragUpdate(null, start_event.clientX-last_x, start_event.clientY-last_y, event);
+	drag_obj.dragUpdate(null, startClientX-last_x, startClientY-last_y, event);
       started = false;  // Sometimes get the same event twice.
     };
 
@@ -225,10 +246,17 @@ Raphael.el.draggable = function(options) {
     $(document).bind('keydown', keydown);
     $(document).bind('mousemove', mousemove);
     $(document).bind('mouseup', mouseup);
+    return false;
+  };
 
+  var mousedown = function(event) {
+    if (typeof right_button != 'undefined' && (right_button === false) === (event.button > 1))
+      return true;
+    dragNow(drag_obj, event);
     event.stopImmediatePropagation(); // Ensure that whatever drag we start, there's only one!
     return false;
   };
+
   var click = function(event) {
     if (skip_click)
       event.stopImmediatePropagation();
@@ -237,4 +265,14 @@ Raphael.el.draggable = function(options) {
   };
   $(handle.node).bind('mousedown', mousedown);
   $(handle.node).bind('click', click);	  // Bind click now so that we can stop other click handlers
+
+  /*
+   * Start a drag immediately, using the drag_obj passed,
+   * and with the initial mouse location as given by event.
+   * If the event is not available, the first delta will
+   * appear to be from 0,0.
+   */
+  this.draggable.drag = function(drag_obj, event) {
+    return dragNow(drag_obj || handle, event, true);
+  };
 };
