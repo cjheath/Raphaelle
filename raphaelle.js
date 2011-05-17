@@ -64,6 +64,7 @@ Raphael.el.draggable = function(options) {
   if (!options) options = {};
   // If you define drag_obj to be null, you must provide a dragStart that returns one:
   var drag_obj = typeof options.drag_obj !== 'undefined' ? options.drag_obj : handle;
+  var paper = handle.paper;
 
   // Set right_button to true for right-click dragging only, to false for left-click only. Otherwise you get both.
   var right_button = options.right_button;
@@ -98,8 +99,6 @@ Raphael.el.draggable = function(options) {
 
     // Figure out what object (other than drag_obj) is under the pointer
     var over = function(event) {
-      var paper = handle.paper || drag_obj.paper;
-      if (!paper) return null;	// Something was deleted
       if (drag_obj) drag_obj.hide();
       var dragging_over = document.elementFromPoint(event.clientX, event.clientY);
       if ($.browser.opera && dragging_over.tagName === 'svg') {
@@ -145,10 +144,13 @@ Raphael.el.draggable = function(options) {
     };
 
     var mousemove = function(event) {
+      if (event.dragSeen)
+	return false;	// Avoid multiple delivery; this indicates a bug in user code.
+      event.dragSeen = true;
       var position;
       var delta_x, delta_y;
       if (last_x === undefined || last_x === null) {  // From startImmediately
-	position = canvas_offset(handle.paper.canvas);
+	position = canvas_offset(paper.canvas);
 	delta_x = last_x = event.clientX-position.left;
 	delta_y = last_y = event.clientY-position.top;
 	drag_obj.show();
@@ -161,7 +163,7 @@ Raphael.el.draggable = function(options) {
 
       if (!started && (delta_x>=reluctance || delta_x<=-reluctance || delta_y>=reluctance || delta_y<=-reluctance)) {
 	if (handle.dragStart) {
-	  position = canvas_offset(handle.paper.canvas);
+	  position = canvas_offset(paper.canvas);
 
 	  var o = handle.dragStart(event.clientX-delta_x-position.left, event.clientY-delta_y-position.top, startEvent, event);
 	  if (!o || o === true)
@@ -174,17 +176,17 @@ Raphael.el.draggable = function(options) {
       if (!started || !drag_obj) return false;
 
       var dragging_over = over(event);
-      // console.log("Move "+drag_obj.node.id+" over "+dragging_over.id+" to X="+event.clientX+", Y="+event.clientY);
+      // console.log("Move "+drag_obj.id+" over "+dragging_over.id+" to X="+event.clientX+", Y="+event.clientY);
       var update = drag_obj.dragUpdate ? drag_obj.dragUpdate : function(o, dx, dy, e) { drag_obj.translate(dx, dy); };
       update(dragging_over, delta_x, delta_y, event);
-      handle.paper.safari();
+      paper.safari();
       last_x = event.clientX;
       last_y = event.clientY;
       return false;
     };
 
     if (!started && reluctance === 0 && handle.dragStart) {
-      var position = canvas_offset(handle.paper.canvas);
+      var position = canvas_offset(paper.canvas);
       var o = handle.dragStart(startClientX-position.left, startClientY-position.top, startEvent, startEvent);
       if (!o || o === true)
 	return !!o; // Don't start the drag yet if told not to
@@ -221,7 +223,7 @@ Raphael.el.draggable = function(options) {
       if (started) {
 	var dropped_on = over(event);
 	if (drag_obj && drag_obj.dragFinish) {
-	  var position = canvas_offset(handle.paper.canvas);
+	  var position = canvas_offset(paper.canvas);
 
 	  drag_obj.dragFinish(dropped_on, event.clientX-position.left, event.clientY-position.top, event);
 	}
@@ -238,7 +240,7 @@ Raphael.el.draggable = function(options) {
       $(document).unbind('mouseup', mouseup);
       $(document).unbind('mousemove', mousemove);
       $(document).unbind('keydown', keydown);
-      handle.paper.safari();
+      paper.safari();
 
       started = false;
     };
