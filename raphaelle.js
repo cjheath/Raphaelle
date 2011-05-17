@@ -178,7 +178,7 @@ Raphael.el.draggable = function(options) {
       var dragging_over = over(event);
       // console.log("Move "+drag_obj.id+" over "+dragging_over.id+" to X="+event.clientX+", Y="+event.clientY);
       var update = drag_obj.dragUpdate ? drag_obj.dragUpdate : function(o, dx, dy, e) { drag_obj.translate(dx, dy); };
-      update(dragging_over, delta_x, delta_y, event);
+      update.call(drag_obj, dragging_over, delta_x, delta_y, event);
       paper.safari();
       last_x = event.clientX;
       last_y = event.clientY;
